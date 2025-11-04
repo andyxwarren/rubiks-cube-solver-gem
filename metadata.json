@@ -1,0 +1,7 @@
+{
+  "name": "Rubik's Cube Solver",
+  "description": "An application to solve a Rubik's cube by scanning its faces using your phone's camera. Features color calibration for non-standard cubes.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

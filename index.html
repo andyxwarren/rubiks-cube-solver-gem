@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rubik's Cube Solver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+<style>
+:root {
+  --cube-size: 200px;
+  --cubie-size: calc(var(--cube-size) / 3);
+  --half-cubie-size: calc(var(--cubie-size) / 2);
+  --sticker-size: calc(var(--cubie-size) * 0.9);
+  --sticker-offset: calc((var(--cubie-size) - var(--sticker-size)) / 2);
+}
+.scene {
+  width: var(--cube-size);
+  height: var(--cube-size);
+  perspective: calc(var(--cube-size) * 4);
+}
+.cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: translateZ(calc(var(--cube-size) * -1)) rotateX(-30deg) rotateY(-45deg);
+}
+.cubie {
+  position: absolute;
+  width: var(--cubie-size);
+  height: var(--cubie-size);
+  transform-style: preserve-3d;
+}
+.cubie-face {
+  position: absolute;
+  width: var(--sticker-size);
+  height: var(--sticker-size);
+  top: var(--sticker-offset);
+  left: var(--sticker-offset);
+  background-color: #111;
+  border: 1px solid #000;
+  border-radius: 4px;
+}
+.cubie-face-F { transform: rotateY(0deg) translateZ(var(--half-cubie-size)); }
+.cubie-face-B { transform: rotateY(180deg) translateZ(var(--half-cubie-size)); }
+.cubie-face-R { transform: rotateY(90deg) translateZ(var(--half-cubie-size)); }
+.cubie-face-L { transform: rotateY(-90deg) translateZ(var(--half-cubie-size)); }
+.cubie-face-U { transform: rotateX(90deg) translateZ(var(--half-cubie-size)); }
+.cubie-face-D { transform: rotateX(-90deg) translateZ(var(--half-cubie-size)); }
+
+.cube-layer {
+  width: var(--cube-size);
+  height: var(--cube-size);
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+/* --- ANIMATIONS --- */
+.anim-U { animation: anim-U 0.5s forwards; }
+@keyframes anim-U {
+  from { transform: rotateY(0); } to { transform: rotateY(-90deg); }
+}
+.anim-U-prime { animation: anim-U-prime 0.5s forwards; }
+@keyframes anim-U-prime {
+  from { transform: rotateY(0); } to { transform: rotateY(90deg); }
+}
+.anim-U2 { animation: anim-U2 0.5s forwards; }
+@keyframes anim-U2 {
+  from { transform: rotateY(0); } to { transform: rotateY(-180deg); }
+}
+
+.anim-D { animation: anim-D 0.5s forwards; }
+@keyframes anim-D {
+  from { transform: rotateY(0); } to { transform: rotateY(90deg); }
+}
+.anim-D-prime { animation: anim-D-prime 0.5s forwards; }
+@keyframes anim-D-prime {
+  from { transform: rotateY(0); } to { transform: rotateY(-90deg); }
+}
+.anim-D2 { animation: anim-D2 0.5s forwards; }
+@keyframes anim-D2 {
+  from { transform: rotateY(0); } to { transform: rotateY(180deg); }
+}
+
+.anim-R { animation: anim-R 0.5s forwards; }
+@keyframes anim-R {
+  from { transform: rotateX(0); } to { transform: rotateX(90deg); }
+}
+.anim-R-prime { animation: anim-R-prime 0.5s forwards; }
+@keyframes anim-R-prime {
+  from { transform: rotateX(0); } to { transform: rotateX(-90deg); }
+}
+.anim-R2 { animation: anim-R2 0.5s forwards; }
+@keyframes anim-R2 {
+  from { transform: rotateX(0); } to { transform: rotateX(180deg); }
+}
+
+.anim-L { animation: anim-L 0.5s forwards; }
+@keyframes anim-L {
+  from { transform: rotateX(0); } to { transform: rotateX(-90deg); }
+}
+.anim-L-prime { animation: anim-L-prime 0.5s forwards; }
+@keyframes anim-L-prime {
+  from { transform: rotateX(0); } to { transform: rotateX(90deg); }
+}
+.anim-L2 { animation: anim-L2 0.5s forwards; }
+@keyframes anim-L2 {
+  from { transform: rotateX(0); } to { transform: rotateX(-180deg); }
+}
+
+.anim-F { animation: anim-F 0.5s forwards; }
+@keyframes anim-F {
+  from { transform: rotateZ(0); } to { transform: rotateZ(90deg); }
+}
+.anim-F-prime { animation: anim-F-prime 0.5s forwards; }
+@keyframes anim-F-prime {
+  from { transform: rotateZ(0); } to { transform: rotateZ(-90deg); }
+}
+.anim-F2 { animation: anim-F2 0.5s forwards; }
+@keyframes anim-F2 {
+  from { transform: rotateZ(0); } to { transform: rotateZ(180deg); }
+}
+
+.anim-B { animation: anim-B 0.5s forwards; }
+@keyframes anim-B {
+  from { transform: rotateZ(0); } to { transform: rotateZ(-90deg); }
+}
+.anim-B-prime { animation: anim-B-prime 0.5s forwards; }
+@keyframes anim-B-prime {
+  from { transform: rotateZ(0); } to { transform: rotateZ(90deg); }
+}
+.anim-B2 { animation: anim-B2 0.5s forwards; }
+@keyframes anim-B2 {
+  from { transform: rotateZ(0); } to { transform: rotateZ(-180deg); }
+}
+
+/* --- Orientation Guide Cube --- */
+.orientation-scene {
+  width: 80px;
+  height: 80px;
+  perspective: 320px;
+}
+.orientation-cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(-30deg) rotateY(-45deg);
+}
+.orientation-face {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border: 2px solid #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+  color: rgba(0,0,0,0.7);
+}
+.orientation-face-F { transform: rotateY(0deg) translateZ(40px); }
+.orientation-face-B { transform: rotateY(180deg) translateZ(40px); }
+.orientation-face-R { transform: rotateY(90deg) translateZ(40px); }
+.orientation-face-L { transform: rotateY(-90deg) translateZ(40px); }
+.orientation-face-U { transform: rotateX(90deg) translateZ(40px); }
+.orientation-face-D { transform: rotateX(-90deg) translateZ(40px); }
+
+.orient-anim-R { animation: orient-R 2s ease-in-out infinite alternate; }
+@keyframes orient-R {
+  from { transform: rotateX(-30deg) rotateY(-45deg); }
+  to   { transform: rotateX(-30deg) rotateY(-135deg); }
+}
+.orient-anim-L { animation: orient-L 2s ease-in-out infinite alternate; }
+@keyframes orient-L {
+  from { transform: rotateX(-30deg) rotateY(-45deg); }
+  to   { transform: rotateX(-30deg) rotateY(45deg); }
+}
+.orient-anim-B { animation: orient-B 2s ease-in-out infinite alternate; }
+@keyframes orient-B {
+  from { transform: rotateX(-30deg) rotateY(-45deg); }
+  to   { transform: rotateX(-30deg) rotateY(-225deg); }
+}
+.orient-anim-U { animation: orient-U 2s ease-in-out infinite alternate; }
+@keyframes orient-U {
+  from { transform: rotateX(-30deg) rotateY(0deg); }
+  to   { transform: rotateX(60deg) rotateY(0deg) rotateZ(180deg); }
+}
+.orient-anim-D { animation: orient-D 2s ease-in-out infinite alternate; }
+@keyframes orient-D {
+  from { transform: rotateX(-30deg) rotateY(0deg); }
+  to   { transform: rotateX(-120deg) rotateY(0deg); }
+}
+</style>
+</head>
+  <body class="bg-gray-900 text-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
