@@ -20,23 +20,84 @@ const kociemba = (() => {
 
     function init() {
         if (p1_co_dist) return;
-        corner = new Array(6); edge = new Array(6);
+
+        // Initialize corner and edge piece definitions
+        // corner[i][j] = the face of the j-th sticker of corner piece i
+        corner = [
+            ["U", "R", "F"],  // URF corner
+            ["U", "F", "L"],  // UFL corner
+            ["U", "L", "B"],  // ULB corner
+            ["U", "B", "R"],  // UBR corner
+            ["D", "F", "R"],  // DFR corner
+            ["D", "L", "F"],  // DLF corner
+            ["D", "B", "L"],  // DBL corner
+            ["D", "R", "B"]   // DRB corner
+        ];
+
+        edge = [
+            ["U", "R"],  // UR edge
+            ["U", "F"],  // UF edge
+            ["U", "L"],  // UL edge
+            ["U", "B"],  // UB edge
+            ["D", "R"],  // DR edge
+            ["D", "F"],  // DF edge
+            ["D", "L"],  // DL edge
+            ["D", "B"],  // DB edge
+            ["F", "R"],  // FR edge
+            ["F", "L"],  // FL edge
+            ["B", "L"],  // BL edge
+            ["B", "R"]   // BR edge
+        ];
+
+        Cperm = new Array(18); Eperm = new Array(18); Mperm = new Array(18);
+
+        // Define corner permutations for each move (U, D, F, B, L, R)
+        let corner_perms = [
+            [3, 0, 1, 2, 4, 5, 6, 7],  // U
+            [0, 1, 2, 3, 5, 6, 7, 4],  // D
+            [0, 1, 6, 3, 2, 5, 4, 7],  // F
+            [0, 1, 2, 7, 4, 5, 6, 3],  // B
+            [0, 2, 6, 3, 4, 1, 5, 7],  // L
+            [4, 1, 2, 0, 7, 5, 6, 3]   // R
+        ];
+
+        // Define edge permutations for each move (U, D, F, B, L, R)
+        let edge_perms = [
+            [3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11],    // U
+            [0, 1, 2, 3, 5, 6, 7, 4, 8, 9, 10, 11],    // D
+            [0, 5, 2, 3, 4, 9, 6, 7, 1, 8, 10, 11],    // F
+            [0, 1, 2, 11, 4, 5, 6, 7, 8, 9, 3, 10],    // B
+            [0, 1, 6, 3, 4, 5, 10, 7, 8, 2, 9, 11],    // L
+            [8, 1, 2, 3, 0, 5, 6, 7, 11, 9, 10, 4]     // R
+        ];
+
+        // Define middle slice permutations
+        let mperm_perms = [
+            [0, 1, 2, 3],  // U
+            [0, 1, 2, 3],  // D
+            [3, 0, 1, 2],  // F
+            [1, 2, 3, 0],  // B
+            [0, 1, 2, 3],  // L
+            [0, 1, 2, 3]   // R
+        ];
+
+        // Generate Cperm, Eperm, Mperm for each move (1, 2, 3 quarter turns)
         for (let i = 0; i < 6; i++) {
-            corner[i] = new Array(4);
-            edge[i] = new Array(4);
-        }
-        Cperm = new Array(20); Eperm = new Array(20); Mperm = new Array(20);
-        
-        let c = "0123", e = "0123456789ab";
-        let moves = ["U", "D", "F", "B", "L", "R"];
-        for (let i = 0; i < 6; i++) {
-            let m = moves[i];
-            let c1 = c, e1 = e;
+            let c_perm = corner_perms[i].slice();
+            let e_perm = edge_perms[i].slice();
+            let m_perm = mperm_perms[i].slice();
+
             for (let j = 0; j < 3; j++) {
-                c1 = move_str(c1, P1_CORNER_MOVE[i]);
-                e1 = move_str(e1, P1_EDGE_MOVE[i]);
-                Cperm[i * 3 + j] = c1;
-                Eperm[i * 3 + j] = e1;
+                Cperm[i * 3 + j] = c_perm.slice();
+                Eperm[i * 3 + j] = e_perm.slice();
+                Mperm[i * 3 + j] = m_perm.slice();
+
+                // Apply the permutation again for next turn
+                if (j < 2) {
+                    c_perm = corner_perms[i].map((_, idx) => c_perm[corner_perms[i][idx]]);
+                    e_perm = edge_perms[i].map((_, idx) => e_perm[edge_perms[i][idx]]);
+                    m_perm = mperm_perms[i].map((_, idx) => m_perm[mperm_perms[i][idx]]);
+                }
             }
         }
         
@@ -163,7 +224,9 @@ const kociemba = (() => {
 
     let fact = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800, 479001600];
     function solve(state_str) {
+        console.log("Solver: Initializing...");
         init();
+        console.log("Solver: Initialization complete, starting solve...");
         let solution = "";
         let face_map = {U:0, R:1, F:2, D:3, L:4, B:5};
         let co = "00000000", eo = "000000000000", cp = "01234567", ep = "0123456789ab", sl = "0123";
@@ -277,10 +340,15 @@ const kociemba = (() => {
         }
 
         for (let d = 0; d < 14; d++) {
-            if (search(co_ori, eo_ori, sl_idx, d, -1)) break;
+            console.log(`Solver: Searching at depth ${d}...`);
+            if (search(co_ori, eo_ori, sl_idx, d, -1)) {
+                console.log(`Solver: Solution found at depth ${d}`);
+                break;
+            }
         }
-        
+
         let result = solution.slice(0, -1).replace(/1/g, "").replace(/2/g, "2").replace(/3/g, "'");
+        console.log("Solver: Complete! Solution:", result);
         return result.replace(/([A-Z])('?2?)/g, "$1$2 ").trim();
     }
 
