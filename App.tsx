@@ -59,14 +59,14 @@ const App: React.FC = () => {
     setAppState(AppState.OVERVIEW);
   };
 
-  const handleSolve = useCallback(() => {
+  const handleSolve = useCallback(async () => {
     setAppState(AppState.SOLVING);
     setError(null);
-    
+
     // Use a short timeout to make the UI transition smoother
-    setTimeout(() => {
+    setTimeout(async () => {
         try {
-            const solutionResult = solve(cubeState);
+            const solutionResult = await solve(cubeState);
             setSolution(solutionResult);
             setAppState(AppState.SOLVED);
         } catch (err) {
