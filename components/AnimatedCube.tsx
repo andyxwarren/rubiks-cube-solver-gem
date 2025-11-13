@@ -12,8 +12,7 @@ interface CubieState {
 }
 
 // --- Constants ---
-// Fix: Correct type annotation for SOLVED_CUBIE_PROPS. The .map call adds the 'id' property, making it a CubieState[].
-const SOLVED_CUBIE_PROPS: CubieState[] = [
+const SOLVED_CUBIE_PROPS: Omit<CubieState, 'id'>[] = [
     // Up face (y=-1)
     { pos: [-1, -1, -1], colors: { U: CubeColor.WHITE, L: CubeColor.ORANGE, B: CubeColor.BLUE } },
     { pos: [ 0, -1, -1], colors: { U: CubeColor.WHITE, B: CubeColor.BLUE } },
@@ -43,7 +42,9 @@ const SOLVED_CUBIE_PROPS: CubieState[] = [
     { pos: [-1, 1,  1], colors: { D: CubeColor.YELLOW, L: CubeColor.ORANGE, F: CubeColor.GREEN } },
     { pos: [ 0, 1,  1], colors: { D: CubeColor.YELLOW, F: CubeColor.GREEN } },
     { pos: [ 1, 1,  1], colors: { D: CubeColor.YELLOW, R: CubeColor.RED,    F: CubeColor.GREEN } },
-].map((p, i) => ({...p, id: i, pos: p.pos as Vector3}));
+];
+
+const CUBIE_DATA: CubieState[] = SOLVED_CUBIE_PROPS.map((p, i) => ({...p, id: i, pos: p.pos as Vector3}));
 
 
 const stickerMap: Record<FaceName, { pos: Vector3; face: FaceName }[][]> = {
@@ -81,9 +82,9 @@ const stickerMap: Record<FaceName, { pos: Vector3; face: FaceName }[][]> = {
 
 const mapScannedStateToCubies = (scannedState: CubeState): CubieState[] => {
     if (Object.keys(scannedState).length < 6) {
-        return SOLVED_CUBIE_PROPS.map(p => ({...p}));
+        return CUBIE_DATA.map(p => ({...p}));
     }
-    const cubies: CubieState[] = SOLVED_CUBIE_PROPS.map((p) => ({ ...p, colors: {} }));
+    const cubies: CubieState[] = CUBIE_DATA.map((p) => ({ ...p, colors: {} }));
 
     for (const faceName of (Object.keys(stickerMap) as FaceName[])) {
         const scannedFace = scannedState[faceName];
@@ -114,45 +115,54 @@ const applyMove = (cubies: CubieState[], move: string): CubieState[] => {
         const nextState = JSON.parse(JSON.stringify(currentCubiesState));
         for (const cubie of currentCubiesState) {
             const [x, y, z] = cubie.pos;
-            const colors = cubie.colors;
             const targetCubie = nextState.find(c => c.id === cubie.id);
             if (!targetCubie) continue;
+            
+            let shouldRotate = false;
+            let newPos: Vector3 = [...cubie.pos];
+            let colorMap: Partial<Record<FaceName, FaceName>> = {};
 
-            if (moveFace === 'U' && y === -1) {
-                targetCubie.pos = isPrime ? [z, y, -x] : [-z, y, x];
-                const newColors: CubieColors = { ...colors, U: colors.U, D: colors.D };
-                if (isPrime) { newColors.F = colors.L; newColors.L = colors.B; newColors.B = colors.R; newColors.R = colors.F; } 
-                else { newColors.F = colors.R; newColors.R = colors.B; newColors.B = colors.L; newColors.L = colors.F; }
-                targetCubie.colors = newColors;
-            } else if (moveFace === 'D' && y === 1) {
-                targetCubie.pos = isPrime ? [-z, y, x] : [z, y, -x];
-                const newColors: CubieColors = { ...colors, U: colors.U, D: colors.D };
-                if (isPrime) { newColors.F = colors.R; newColors.R = colors.B; newColors.B = colors.L; newColors.L = colors.F; }
-                else { newColors.F = colors.L; newColors.L = colors.B; newColors.B = colors.R; newColors.R = colors.F; }
-                targetCubie.colors = newColors;
-            } else if (moveFace === 'L' && x === -1) {
-                targetCubie.pos = isPrime ? [x, -z, y] : [x, z, -y];
-                const newColors: CubieColors = { ...colors, L: colors.L, R: colors.R };
-                if (isPrime) { newColors.U = colors.F; newColors.F = colors.D; newColors.D = colors.B; newColors.B = colors.U; }
-                else { newColors.U = colors.B; newColors.B = colors.D; newColors.D = colors.F; newColors.F = colors.U; }
-                targetCubie.colors = newColors;
-            } else if (moveFace === 'R' && x === 1) {
-                targetCubie.pos = isPrime ? [x, z, -y] : [x, -z, y];
-                const newColors: CubieColors = { ...colors, L: colors.L, R: colors.R };
-                if (isPrime) { newColors.U = colors.B; newColors.B = colors.D; newColors.D = colors.F; newColors.F = colors.U; }
-                else { newColors.U = colors.F; newColors.F = colors.D; newColors.D = colors.B; newColors.B = colors.U; }
-                targetCubie.colors = newColors;
-            } else if (moveFace === 'F' && z === 1) {
-                targetCubie.pos = isPrime ? [-y, x, z] : [y, -x, z];
-                const newColors: CubieColors = { ...colors, F: colors.F, B: colors.B };
-                if (isPrime) { newColors.U = colors.L; newColors.L = colors.D; newColors.D = colors.R; newColors.R = colors.U; }
-                else { newColors.U = colors.R; newColors.R = colors.D; newColors.D = colors.L; newColors.L = colors.U; }
-                targetCubie.colors = newColors;
-            } else if (moveFace === 'B' && z === -1) {
-                targetCubie.pos = isPrime ? [y, -x, z] : [-y, x, z];
-                const newColors: CubieColors = { ...colors, F: colors.F, B: colors.B };
-                if (isPrime) { newColors.U = colors.R; newColors.R = colors.D; newColors.D = colors.L; newColors.L = colors.U; }
-                else { newColors.U = colors.L; newColors.L = colors.D; newColors.D = colors.R; newColors.R = colors.U; }
+            switch(moveFace) {
+                case 'U': if (y === -1) {
+                    shouldRotate = true;
+                    newPos = isPrime ? [-z, y, x] : [z, y, -x];
+                    colorMap = isPrime ? { F: 'L', L: 'B', B: 'R', R: 'F' } : { F: 'R', R: 'B', B: 'L', L: 'F' };
+                } break;
+                case 'D': if (y === 1) {
+                    shouldRotate = true;
+                    newPos = isPrime ? [z, y, -x] : [-z, y, x];
+                    colorMap = isPrime ? { F: 'R', R: 'B', B: 'L', L: 'F' } : { F: 'L', L: 'B', B: 'R', R: 'F' };
+                } break;
+                case 'L': if (x === -1) {
+                    shouldRotate = true;
+                    newPos = isPrime ? [x, z, -y] : [x, -z, y];
+                    colorMap = isPrime ? { U: 'B', B: 'D', D: 'F', F: 'U' } : { U: 'F', F: 'D', D: 'B', B: 'U' };
+                } break;
+                case 'R': if (x === 1) {
+                    shouldRotate = true;
+                    newPos = isPrime ? [x, -z, y] : [x, z, -y];
+                    colorMap = isPrime ? { U: 'F', F: 'D', D: 'B', B: 'U' } : { U: 'B', B: 'D', D: 'F', F: 'U' };
+                } break;
+                case 'F': if (z === 1) {
+                    shouldRotate = true;
+                    newPos = isPrime ? [y, -x, z] : [-y, x, z];
+                    colorMap = isPrime ? { U: 'L', L: 'D', D: 'R', R: 'U' } : { U: 'R', R: 'D', D: 'L', L: 'U' };
+                } break;
+                case 'B': if (z === -1) {
+                    shouldRotate = true;
+                    newPos = isPrime ? [-y, x, z] : [y, -x, z];
+                    colorMap = isPrime ? { U: 'R', R: 'D', D: 'L', L: 'U' } : { U: 'L', L: 'D', D: 'R', R: 'U' };
+                } break;
+            }
+
+            if (shouldRotate) {
+                targetCubie.pos = newPos;
+                const newColors: CubieColors = {};
+                for (const [faceStr, color] of Object.entries(cubie.colors)) {
+                    const face = faceStr as FaceName;
+                    const mappedFace = colorMap[face] || face;
+                    newColors[mappedFace] = color;
+                }
                 targetCubie.colors = newColors;
             }
         }
@@ -175,15 +185,26 @@ interface CubieProps extends CubieState {}
 
 const Cubie: React.FC<CubieProps> = React.memo(({ pos, colors }) => {
     const [x, y, z] = pos;
+    // This revised transform logic ensures perfect centering for rotations.
+    // 1. top:50%/left:50% places the cubie's top-left corner at the parent's center.
+    // 2. translateX/Y(-50%) translates the cubie by half its own size, perfectly centering it.
+    // 3. The remaining translates position the centered cubie within the 3x3x3 grid.
     const transform = `
+        translateX(-50%) translateY(-50%)
         translateX(calc(var(--cubie-size) * ${x}))
         translateY(calc(var(--cubie-size) * ${y}))
         translateZ(calc(var(--cubie-size) * ${z}))
     `;
+    
+    const style = {
+      transform,
+      top: '50%',
+      left: '50%',
+    };
+
     return (
-        <div className="cubie" style={{ transform }}>
+        <div className="cubie" style={style}>
             {Object.entries(colors).map(([face, color]) => (
-                // Fix: Add type assertion to 'color' because TypeScript infers it as 'unknown' from Object.entries.
                 <div key={face} className={`cubie-face cubie-face-${face} ${COLOR_CLASSES[color as CubeColor]}`} />
             ))}
         </div>
@@ -260,8 +281,6 @@ const AnimatedCube: React.FC<AnimatedCubeProps> = ({ initialState, solution, cur
     return (
         <div className="scene">
             <div className="cube" style={{ transform: `translateZ(calc(var(--cube-size) * -1)) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)` }}>
-                <div className="cubie" style={{ transform: 'translateZ(0)' }}></div> {/* Center piece */}
-                
                 {staticCubies.map(cubie => <Cubie key={cubie.id} {...cubie} />)}
 
                 {animationState && (

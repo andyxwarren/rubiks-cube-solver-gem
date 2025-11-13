@@ -59,14 +59,14 @@ const App: React.FC = () => {
     setAppState(AppState.OVERVIEW);
   };
 
-  const handleSolve = useCallback(async () => {
+  const handleSolve = useCallback(() => {
     setAppState(AppState.SOLVING);
     setError(null);
-
+    
     // Use a short timeout to make the UI transition smoother
-    setTimeout(async () => {
+    setTimeout(() => {
         try {
-            const solutionResult = await solve(cubeState);
+            const solutionResult = solve(cubeState);
             setSolution(solutionResult);
             setAppState(AppState.SOLVED);
         } catch (err) {
@@ -181,7 +181,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-2 sm:p-4">
       {renderContent()}
     </div>
   );
